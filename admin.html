@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل ادمین - پیوند مودَّت</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Tahoma', sans-serif; }
+        body { background: linear-gradient(135deg, #fef3e2 0%, #ffe8d4 100%); padding: 20px; min-height: 100vh; }
+        .container { max-width: 950px; margin: auto; background: white; border-radius: 40px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #b45f2b; margin-bottom: 8px; font-size: 28px; }
+        .sub { text-align: center; color: #8b694a; margin-bottom: 30px; font-size: 14px; border-bottom: 2px dashed #ffcd94; padding-bottom: 12px; }
+        
+        .admin-pass-area { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 25px; background: #fef2e6; padding: 18px; border-radius: 40px; }
+        .admin-pass-area input { flex: 1; padding: 12px 18px; border-radius: 40px; border: 1px solid #e2c7a3; font-size: 15px; min-width: 200px; }
+        .admin-pass-area button { background: #c17b42; color: white; border: none; padding: 12px 30px; border-radius: 40px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .admin-pass-area button:hover { background: #a55d2a; transform: scale(1.02); }
+        
+        .decade-buttons { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 25px; }
+        .decade-buttons button { background: #e8d5c0; color: #5a3e2b; border: none; padding: 10px 24px; border-radius: 40px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 14px; }
+        .decade-buttons button:hover { background: #c17b42; color: white; transform: scale(1.02); }
+        .decade-buttons button.active { background: #c17b42; color: white; }
+        
+        .admin-panel-content { background: #faf3ea; border-radius: 28px; padding: 20px; max-height: 550px; overflow-y: auto; margin-top: 15px; }
+        .admin-card { border: 2px solid #c17b42; margin-bottom: 18px; padding: 18px; border-radius: 24px; background: #fffef7; }
+        .admin-card strong { color: #b45f2b; font-size: 18px; }
+        
+        .status { padding: 14px; border-radius: 30px; margin: 15px 0; text-align: center; font-weight: bold; }
+        .success { background: #d9f0da; color: #2a6817; border-right: 5px solid #2a6817; }
+        .error { background: #ffe0dc; color: #b33; border-right: 5px solid #b33; }
+        
+        .btn-home { background: #6c757d; color: white; border: none; padding: 12px 28px; border-radius: 40px; cursor: pointer; font-size: 15px; font-weight: bold; transition: 0.2s; margin-top: 20px; }
+        .btn-home:hover { background: #5a6268; transform: translateY(-2px); }
+        .text-center { text-align: center; }
+        .hidden { display: none; }
+        .badge { background: #b45f2b; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; display: inline-block; margin-top: 5px; }
+        .loading { text-align: center; padding: 40px; color: #8b694a; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🔐 پنل مدیریت - پیوند مودَّت</h1>
+    <div class="sub">ورود به بخش ادمین (مشاهده اطلاعات کامل کاربران)</div>
+
+    <div id="messageArea"></div>
+
+    <div class="admin-pass-area">
+        <input type="password" id="adminPasswordInput" placeholder="رمز ادمین را وارد کنید">
+        <button id="verifyAdminBtn">ورود به پنل</button>
+    </div>
+
+    <div id="adminPanel" class="hidden">
+        <div class="decade-buttons">
+            <button class="active" data-decade="همه">همه</button>
+            <button data-decade="دهه چهل و پنجاه">دهه چهل و پنجاه</button>
+            <button data-decade="دهه شصت">دهه شصت</button>
+            <button data-decade="دهه هفتاد">دهه هفتاد</button>
+            <button data-decade="دهه هشتاد">دهه هشتاد</button>
+        </div>
+        <div id="adminDataArea" class="admin-panel-content">
+            <div class="loading">⏳ اطلاعات را بارگذاری کنید...</div>
+        </div>
+    </div>
+
+    <div class="text-center">
+        <button onclick="location.href='index.html'" class="btn-home">🏠 بازگشت به صفحه ثبت‌نام</button>
+    </div>
+</div>
+
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz28QaBPiR_HMAeIEKPUYaZRq_h34YGU0J2Qof1YutVaYGd-cTwSUFboZGRi0V1zcvd/exec";
+    const ADMIN_PASSWORD = "admin1357";
+
+    let allUsers = [];
+    let currentDecade = 'همه';
+    let isLoggedIn = false;
+
+    async function loadFromSheet() {
+        try {
+            const res = await fetch(SCRIPT_URL);
+            const data = await res.json();
+            allUsers = Array.isArray(data) ? data : [];
+            renderAdminData(currentDecade);
+        } catch(e) {
+            document.getElementById('adminDataArea').innerHTML = '<div class="loading">❌ خطا در ارتباط با سرور</div>';
+        }
+    }
+
+    function renderAdminData(decade) {
+        const container = document.getElementById('adminDataArea');
+        let filtered = decade === 'همه' ? allUsers : allUsers.filter(u => u.decade === decade);
+
+        if (filtered.length === 0) {
+            container.innerHTML = `<div class="loading">📭 هیچ کاربری در این دهه ثبت‌نام نکرده است</div>`;
+            return;
+        }
+
+        let html = '';
+        filtered.forEach((user) => {
+            html += `
+                <div class="admin-card">
+                    <strong>👤 ${user.fullname || 'نامشخص'}</strong>
+                    <span class="badge">${user.decade || 'نامشخص'}</span><br>
+                    📞 شماره تماس ۱: ${user.phone1 || '-'} | شماره تماس ۲: ${user.phone2 || '-'}<br>
+                    🚻 جنسیت: ${user.gender || '-'} | 📅 تولد: ${user.birthYear}/${user.birthMonth}/${user.birthDay}<br>
+                    قد/وزن: ${user.height}/${user.weight}<br>
+                    شغل پدر/مادر: ${user.fatherJob} / ${user.motherJob}<br>
+                    رنگ پوست/چشم: ${user.skinColor} / ${user.eyeColor}<br>
+                    پوشش: ${user.dressCode} | شغل: ${user.jobType}<br>
+                    شرح شغل: ${user.jobDesc || '-'}<br>
+                    وضعیت جسمی: ${user.physicalStatus} | دخانیات: ${user.smoking}<br>
+                    تعداد خانواده: ${user.familyCount} | فرزند چندم: ${user.childOrder}<br>
+                    استان: ${user.province} | شهرستان: ${user.city} | محله: ${user.neighborhood}<br>
+                    خصوصیات اخلاقی: ${user.personality || '-'}<br>
+                    معیار همسر: ${user.spouseCriteria || '-'}<br>
+                    سابقه ازدواج: ${user.marriageHistory || '-'}<br>
+                    ${user.marriageDuration ? `مدت زندگی مشترک: ${user.marriageDuration}<br>` : ''}
+                    ${user.marriageRegistered ? `در شناسنامه قید شده: ${user.marriageRegistered}<br>` : ''}
+                    ${user.childGender ? `جنسیت فرزند: ${user.childGender} | سن: ${user.childAge || '-'}<br>` : ''}
+                    ${user.childCustody ? `نحوه حضانت: ${user.childCustody}<br>` : ''}
+                    استان‌های قابل قبول: ${user.acceptProvinces || '-'}<br>
+                    شهرهای قابل قبول: ${user.acceptCities || '-'}<br>
+                    شغل ایده‌آل همسر: ${user.spouseJobAccept || '-'}<br>
+                    ${user.freeJobDesc ? `شغل آزاد مد نظر: ${user.freeJobDesc}<br>` : ''}
+                    اختلاف سنی: ${user.ageDiff || '-'}<br>
+                    تحصیلات همسر: ${user.minEduSpouse || '-'}<br>
+                    تحصیلات خود: ${user.selfEducation || '-'}<br>
+                    درآمد: ${user.income || '-'}<br>
+                    دارایی: ${user.assets || '-'}<br>
+                    توضیحات: ${user.moreInfo || '-'}<br>
+                    📱 آیدی ایتا: ${user.eitaaId || '-'}<br>
+                    📱 آیدی روبیکا: ${user.rubikaId || '-'}<br>
+                    📱 آیدی بله: ${user.baleId || '-'}<br>
+                    📱 آیدی سروش: ${user.soroushId || '-'}<br>
+                    نحوه ارتباط: ${user.contactMethod || '-'}<br>
+                    <small>🕐 زمان ثبت: ${user.timestamp || ''}</small>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    function showMessage(msg, isError = false) {
+        const div = document.getElementById('messageArea');
+        div.innerHTML = `<div class="status ${isError ? 'error' : 'success'}">${msg}</div>`;
+        setTimeout(() => div.innerHTML = '', 5000);
+    }
+
+    document.getElementById('verifyAdminBtn').addEventListener('click', async function() {
+        const pass = document.getElementById('adminPasswordInput').value;
+        if (pass !== ADMIN_PASSWORD) {
+            showMessage('❌ رمز ادمین اشتباه است!', true);
+            return;
+        }
+        isLoggedIn = true;
+        document.getElementById('adminPanel').classList.remove('hidden');
+        showMessage('✅ ورود موفق - اطلاعات کامل کاربران نمایش داده شد');
+        await loadFromSheet();
+    });
+
+    document.querySelectorAll('.decade-buttons button').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (!isLoggedIn) {
+                showMessage('❌ لطفاً ابتدا وارد پنل ادمین شوید', true);
+                return;
+            }
+            document.querySelectorAll('.decade-buttons button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentDecade = this.dataset.decade;
+            renderAdminData(currentDecade);
+        });
+    });
+
+    document.getElementById('adminPasswordInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('verifyAdminBtn').click();
+        }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مشاهده کاربران - پیوند مودَّت</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Tahoma', sans-serif; }
+        body { background: linear-gradient(135deg, #fef3e2 0%, #ffe8d4 100%); padding: 20px; min-height: 100vh; }
+        .container { max-width: 950px; margin: auto; background: white; border-radius: 40px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #b45f2b; margin-bottom: 8px; font-size: 28px; }
+        .sub { text-align: center; color: #8b694a; margin-bottom: 30px; font-size: 14px; border-bottom: 2px dashed #ffcd94; padding-bottom: 12px; }
+        
+        .decade-buttons { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-bottom: 25px; }
+        .decade-buttons button { background: #e8d5c0; color: #5a3e2b; border: none; padding: 10px 24px; border-radius: 40px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 14px; }
+        .decade-buttons button:hover { background: #c17b42; color: white; transform: scale(1.02); }
+        .decade-buttons button.active { background: #c17b42; color: white; }
+        
+        .user-list { background: #faf3ea; border-radius: 28px; padding: 20px; max-height: 550px; overflow-y: auto; }
+        .user-card { border-bottom: 1px solid #e2c7a3; padding: 14px; margin-bottom: 12px; background: white; border-radius: 20px; }
+        .user-card:last-child { border-bottom: none; }
+        
+        .btn-home { background: #6c757d; color: white; border: none; padding: 12px 28px; border-radius: 40px; cursor: pointer; font-size: 15px; font-weight: bold; transition: 0.2s; margin-top: 20px; }
+        .btn-home:hover { background: #5a6268; transform: translateY(-2px); }
+        .text-center { text-align: center; }
+        .loading { text-align: center; padding: 40px; color: #8b694a; }
+        .badge { background: #c17b42; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; display: inline-block; margin-top: 5px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>👥 پیوند مودَّت</h1>
+    <div class="sub">لیست افراد ثبت‌نام‌شده (بدون نمایش نام و شماره)</div>
+
+    <div class="decade-buttons">
+        <button class="active" data-decade="همه">همه</button>
+        <button data-decade="دهه چهل و پنجاه">دهه چهل و پنجاه</button>
+        <button data-decade="دهه شصت">دهه شصت</button>
+        <button data-decade="دهه هفتاد">دهه هفتاد</button>
+        <button data-decade="دهه هشتاد">دهه هشتاد</button>
+    </div>
+
+    <div id="usersList" class="user-list">
+        <div class="loading">⏳ در حال بارگذاری اطلاعات...</div>
+    </div>
+
+    <div class="text-center">
+        <button onclick="location.href='index.html'" class="btn-home">🏠 بازگشت به صفحه ثبت‌نام</button>
+    </div>
+</div>
+
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz28QaBPiR_HMAeIEKPUYaZRq_h34YGU0J2Qof1YutVaYGd-cTwSUFboZGRi0V1zcvd/exec";
+
+    let allUsers = [];
+    let currentDecade = 'همه';
+
+    async function loadFromSheet() {
+        try {
+            const res = await fetch(SCRIPT_URL);
+            const data = await res.json();
+            allUsers = Array.isArray(data) ? data : [];
+            renderUsers(currentDecade);
+        } catch(e) {
+            document.getElementById('usersList').innerHTML = '<div class="loading">❌ خطا در ارتباط با سرور</div>';
+        }
+    }
+
+    function generateAlias(index) {
+        return `پیوند مودَّت: کد ${index + 1}`;
+    }
+
+    function renderUsers(decade) {
+        const container = document.getElementById('usersList');
+        let filtered = decade === 'همه' ? allUsers : allUsers.filter(u => u.decade === decade);
+
+        if (filtered.length === 0) {
+            container.innerHTML = `<div class="loading">📭 هیچ کاربری در این دهه ثبت‌نام نکرده است</div>`;
+            return;
+        }
+
+        let html = '';
+        filtered.forEach((user, idx) => {
+            const alias = generateAlias(idx);
+            html += `
+                <div class="user-card">
+                    <strong>🆔 ${alias}</strong>
+                    <span class="badge">${user.decade || 'نامشخص'}</span><br>
+                    جنسیت: ${user.gender || '-'}<br>
+                    تاریخ تولد: ${user.birthYear || '-'}/${user.birthMonth || '-'}/${user.birthDay || '-'}<br>
+                    قد: ${user.height || '-'} سانتی‌متر | وزن: ${user.weight || '-'} کیلوگرم<br>
+                    شغل پدر: ${user.fatherJob || '-'} | شغل مادر: ${user.motherJob || '-'}<br>
+                    رنگ پوست: ${user.skinColor || '-'} | رنگ چشم: ${user.eyeColor || '-'}<br>
+                    نوع پوشش: ${user.dressCode || '-'}<br>
+                    شغل: ${user.jobType || '-'}<br>
+                    شرح شغل: ${(user.jobDesc || '-').substring(0,80)}<br>
+                    وضعیت جسمی: ${user.physicalStatus || '-'}<br>
+                    دخانیات: ${user.smoking || '-'}<br>
+                    تعداد خانواده: ${user.familyCount || '-'} نفر | فرزند چندم: ${user.childOrder || '-'}<br>
+                    استان: ${user.province || '-'} | شهرستان: ${user.city || '-'} | محله: ${user.neighborhood || '-'}<br>
+                    خصوصیات اخلاقی: ${(user.personality || '-').substring(0,80)}<br>
+                    معیار همسر: ${(user.spouseCriteria || '-').substring(0,120)}<br>
+                    سابقه ازدواج: ${user.marriageHistory || '-'}<br>
+                    استان‌های قابل قبول: ${user.acceptProvinces || '-'}<br>
+                    شهرهای قابل قبول: ${user.acceptCities || '-'}<br>
+                    شغل ایده‌آل همسر: ${user.spouseJobAccept || '-'}<br>
+                    ${user.freeJobDesc ? `شغل آزاد مد نظر: ${user.freeJobDesc}<br>` : ''}
+                    اختلاف سنی مطلوب: ${user.ageDiff || '-'}<br>
+                    حداقل تحصیلات همسر: ${user.minEduSpouse || '-'}<br>
+                    تحصیلات خود: ${user.selfEducation || '-'}<br>
+                    درآمد: ${user.income || '-'}<br>
+                    وضعیت دارایی: ${user.assets || '-'}<br>
+                    توضیحات: ${(user.moreInfo || '-').substring(0,80)}<br>
+                    نحوه ارتباط: ${user.contactMethod || '-'}
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    document.querySelectorAll('.decade-buttons button').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.decade-buttons button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentDecade = this.dataset.decade;
+            renderUsers(currentDecade);
+        });
+    });
+
+    loadFromSheet();
+</script>
+</body>
+</html>
